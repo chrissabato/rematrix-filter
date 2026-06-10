@@ -115,8 +115,11 @@ jobs:
             --target libobs obs-frontend-api --parallel
           cmake --install obs-studio/build --config RelWithDebInfo \
             --prefix obs-install --component Development
-          deps_dir=$(find obs-studio/.deps -maxdepth 1 -name "obs-deps-*" -type d | head -1)
-          cp -r "$deps_dir/include/simde" obs-install/include/
+          simde_dir=$(find obs-studio/.deps -type d -name "simde" 2>/dev/null | head -1)
+          if [ -n "$simde_dir" ]; then
+            mkdir -p obs-install/include
+            cp -r "$simde_dir" obs-install/include/
+          fi
 
       - name: Configure plugin
         run: |
