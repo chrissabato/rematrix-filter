@@ -8,7 +8,6 @@ on:
 
 env:
   OBS_VERSION: '32.1.2'
-  OBS_DEPS_VERSION: '2025-07-11'
 
 jobs:
   build-windows:
@@ -35,26 +34,18 @@ jobs:
           Expand-Archive obs-src.zip -DestinationPath .
           Rename-Item "obs-studio-${{ env.OBS_VERSION }}" "obs-studio"
 
-      - name: Download prebuilt OBS dependencies
-        if: steps.cache-obs.outputs.cache-hit != 'true'
-        shell: pwsh
-        run: |
-          $url = "https://github.com/obsproject/obs-deps/releases/download/${{ env.OBS_DEPS_VERSION }}/windows-deps-${{ env.OBS_DEPS_VERSION }}-x64.zip"
-          Invoke-WebRequest $url -OutFile obs-deps.zip
-          Expand-Archive obs-deps.zip -DestinationPath obs-deps
-
       - name: Build libobs
         if: steps.cache-obs.outputs.cache-hit != 'true'
         shell: pwsh
         run: |
           cmake -S obs-studio -B obs-studio/build `
             -G "Visual Studio 17 2022" -A x64 `
-            "-DCMAKE_PREFIX_PATH=${{ github.workspace }}/obs-deps" `
             -DENABLE_FRONTEND=OFF `
             -DENABLE_PLUGINS=OFF `
             -DENABLE_SCRIPTING=OFF `
             -DOBS_VERSION_OVERRIDE="${{ env.OBS_VERSION }}"
-          cmake --build obs-studio/build --config RelWithDebInfo --target libobs --parallel
+          cmake --build obs-studio/build --config RelWithDebInfo `
+            --target libobs obs-frontend-api --parallel
           cmake --install obs-studio/build --config RelWithDebInfo `
             --prefix obs-install --component Development
 
