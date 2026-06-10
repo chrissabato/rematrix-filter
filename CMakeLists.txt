@@ -30,9 +30,9 @@ elseif(WIN32)
   )
 elseif(APPLE)
   install(TARGETS rematrix-filter
-    LIBRARY DESTINATION "${CMAKE_INSTALL_PREFIX}/plugins/rematrix-filter/bin"
+    LIBRARY DESTINATION "plugins/rematrix-filter/bin"
   )
   install(DIRECTORY data/
-    DESTINATION "${CMAKE_INSTALL_PREFIX}/plugins/rematrix-filter/data"
+    DESTINATION "plugins/rematrix-filter/data"
   )
 endif()
