@@ -1,4 +1,3 @@
-#pragma once
 #include <obs-module.h>
 #include <stdio.h>
 
