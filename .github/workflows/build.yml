@@ -48,6 +48,13 @@ jobs:
             --target libobs obs-frontend-api --parallel
           cmake --install obs-studio/build --config RelWithDebInfo `
             --prefix obs-install --component Development
+          # libobsConfig.cmake requires SIMDe headers at find_package time.
+          # Copy them from OBS's auto-downloaded deps into obs-install so
+          # they survive the cache and are findable via CMAKE_PREFIX_PATH.
+          $depsDir = Get-ChildItem "obs-studio/.deps" -Directory |
+            Where-Object { $_.Name -match "^obs-deps-[\d-]+-x64$" } |
+            Select-Object -First 1 -ExpandProperty FullName
+          Copy-Item -Recurse -Force "$depsDir/include/simde" "obs-install/include/"
 
       - name: Configure plugin
         shell: pwsh
