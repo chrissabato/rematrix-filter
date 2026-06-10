@@ -97,11 +97,16 @@ jobs:
       - name: Build libobs
         if: steps.cache-obs.outputs.cache-hit != 'true'
         run: |
+          # libobs-metal is pure Swift but OBS never calls enable_language(Swift),
+          # so CMake's generate step can't determine its linker language.
+          # Inject it via CMAKE_PROJECT_TOP_LEVEL_INCLUDES (CMake 3.24+).
+          echo 'enable_language(Swift)' > /tmp/enable-swift.cmake
+
           cmake -S obs-studio -B obs-studio/build \
             -G Xcode \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
             -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
-            -DCMAKE_Swift_COMPILER="$(xcrun --find swift)" \
+            -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES=/tmp/enable-swift.cmake \
             -DENABLE_FRONTEND=OFF \
             -DENABLE_PLUGINS=OFF \
             -DENABLE_SCRIPTING=OFF \
