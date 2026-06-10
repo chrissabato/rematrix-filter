@@ -17,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Cache the compiled libobs install so rebuilds only take seconds
       - name: Restore libobs cache
         id: cache-obs
         uses: actions/cache@v4
@@ -48,9 +47,6 @@ jobs:
             --target libobs obs-frontend-api --parallel
           cmake --install obs-studio/build --config RelWithDebInfo `
             --prefix obs-install --component Development
-          # libobsConfig.cmake requires SIMDe headers at find_package time.
-          # Copy them from OBS's auto-downloaded deps into obs-install so
-          # they survive the cache and are findable via CMAKE_PREFIX_PATH.
           $depsDir = Get-ChildItem "obs-studio/.deps" -Directory |
             Where-Object { $_.Name -match "^obs-deps-[\d-]+-x64$" } |
             Select-Object -First 1 -ExpandProperty FullName
@@ -76,3 +72,99 @@ jobs:
         with:
           name: rematrix-filter-windows-x64
           path: release/
+
+  build-macos:
+    name: macOS Universal
+    runs-on: macos-15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore libobs cache
+        id: cache-obs
+        uses: actions/cache@v4
+        with:
+          path: obs-install
+          key: libobs-macos-universal-${{ env.OBS_VERSION }}
+
+      - name: Download OBS source
+        if: steps.cache-obs.outputs.cache-hit != 'true'
+        run: |
+          curl -L "https://github.com/obsproject/obs-studio/archive/refs/tags/${{ env.OBS_VERSION }}.tar.gz" \
+            | tar xz
+          mv "obs-studio-${{ env.OBS_VERSION }}" obs-studio
+
+      - name: Build libobs
+        if: steps.cache-obs.outputs.cache-hit != 'true'
+        run: |
+          cmake -S obs-studio -B obs-studio/build \
+            -G Xcode \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DENABLE_FRONTEND=OFF \
+            -DENABLE_PLUGINS=OFF \
+            -DENABLE_SCRIPTING=OFF \
+            -DOBS_VERSION_OVERRIDE="${{ env.OBS_VERSION }}"
+          cmake --build obs-studio/build --config RelWithDebInfo \
+            --target libobs obs-frontend-api --parallel
+          cmake --install obs-studio/build --config RelWithDebInfo \
+            --prefix obs-install --component Development
+          deps_dir=$(find obs-studio/.deps -maxdepth 1 -name "obs-deps-*" -type d | head -1)
+          cp -r "$deps_dir/include/simde" obs-install/include/
+
+      - name: Configure plugin
+        run: |
+          cmake -S . -B build \
+            -G Xcode \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DCMAKE_PREFIX_PATH="${{ github.workspace }}/obs-install"
+
+      - name: Build plugin
+        run: cmake --build build --config RelWithDebInfo --parallel
+
+      - name: Stage plugin files
+        run: cmake --install build --config RelWithDebInfo --prefix release
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rematrix-filter-macos-universal
+          path: release/
+
+  release:
+    name: Publish latest release
+    needs: [build-windows, build-macos]
+    runs-on: ubuntu-latest
+    # Only publish on pushes to master, not on PRs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Zip artifacts
+        run: |
+          cd artifacts/rematrix-filter-windows-x64
+          zip -r ../../rematrix-filter-windows-x64.zip .
+          cd ../rematrix-filter-macos-universal
+          zip -r ../../rematrix-filter-macos-universal.zip .
+
+      - name: Update latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes 2>/dev/null || true
+          git tag -d latest 2>/dev/null || true
+          git push origin :refs/tags/latest 2>/dev/null || true
+          gh release create latest \
+            --title "Latest Build" \
+            --notes "Built from [\`${{ github.sha }}\`](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})." \
+            --prerelease \
+            rematrix-filter-windows-x64.zip \
+            rematrix-filter-macos-universal.zip
