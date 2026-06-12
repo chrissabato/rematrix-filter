@@ -29,8 +29,12 @@ elseif(WIN32)
     DESTINATION "data/obs-plugins/rematrix-filter"
   )
 elseif(APPLE)
+  set_target_properties(rematrix-filter PROPERTIES
+    BUNDLE TRUE
+    BUNDLE_EXTENSION "plugin"
+  )
   install(TARGETS rematrix-filter
-    LIBRARY DESTINATION "plugins/rematrix-filter/bin"
+    BUNDLE DESTINATION "plugins/rematrix-filter/bin"
   )
   install(DIRECTORY data/
     DESTINATION "plugins/rematrix-filter/data"

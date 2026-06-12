@@ -41,6 +41,7 @@ OBS must be set to a multi-channel layout (**Settings → Audio → Channels**) 
    ```
    ~/Library/Application Support/obs-studio/plugins/
    ```
+   The zip contains `plugins/rematrix-filter/bin/rematrix-filter.plugin` (and a paired `.dSYM` for debug symbols — you can ignore that).
 3. Restart OBS
 4. If macOS blocks the plugin, go to **System Settings → Privacy & Security** and click **Allow Anyway**
 

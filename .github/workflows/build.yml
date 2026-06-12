@@ -135,7 +135,12 @@ jobs:
         run: cmake --build build --config RelWithDebInfo --parallel
 
       - name: Stage plugin files
-        run: cmake --install build --config RelWithDebInfo --prefix release
+        run: |
+          cmake --install build --config RelWithDebInfo --prefix release
+          dsym=$(find build -name "rematrix-filter.plugin.dSYM" | head -1)
+          if [ -n "$dsym" ]; then
+            cp -r "$dsym" release/plugins/rematrix-filter/bin/
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
