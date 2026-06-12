@@ -34,9 +34,9 @@ elseif(APPLE)
     BUNDLE_EXTENSION "plugin"
   )
   install(TARGETS rematrix-filter
-    BUNDLE DESTINATION "plugins/rematrix-filter/bin"
+    LIBRARY DESTINATION "rematrix-filter/bin"
   )
   install(DIRECTORY data/
-    DESTINATION "plugins/rematrix-filter/data"
+    DESTINATION "rematrix-filter/data"
   )
 endif()
