@@ -32,6 +32,7 @@ elseif(APPLE)
   set_target_properties(rematrix-filter PROPERTIES
     BUNDLE TRUE
     BUNDLE_EXTENSION "plugin"
+    INSTALL_RPATH "@executable_path/../Frameworks"
   )
   install(TARGETS rematrix-filter
     LIBRARY DESTINATION "rematrix-filter/bin"
